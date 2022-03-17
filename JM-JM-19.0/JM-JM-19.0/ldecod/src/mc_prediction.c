@@ -1359,10 +1359,13 @@ static void perform_mc_single_wp(Macroblock *currMB, ColorPlane pl, StorablePict
   int joff = (j << 2);         
   PicMotionParams *mv_info = &dec_picture->mv_info[j4][i4];
   short       ref_idx = mv_info->ref_idx[pred_dir];
+  // ref_idx :  参考帧 索引
+  // pred_dir:  预测方向
   short       ref_idx_wp = ref_idx;
   MotionVector *mv_array = &mv_info->mv[pred_dir];
   int list_offset = currMB->list_offset;
   StorablePicture *list = currSlice->listX[list_offset + pred_dir][ref_idx];
+  // list 参考帧
   int vec1_x, vec1_y;
   // vars for get_block_luma
   int maxold_x = dec_picture->size_x_m1;

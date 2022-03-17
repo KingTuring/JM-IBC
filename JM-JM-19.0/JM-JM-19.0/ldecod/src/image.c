@@ -25,6 +25,8 @@
  *
  ***********************************************************************
  */
+ // avc2code - header
+#include <avc2code.h>
 
 #include "contributors.h"
 
@@ -652,7 +654,9 @@ static void init_picture_decoding(VideoParameters *p_Vid)
    idr_memory_management(p_Vid->p_Dpb_layer[pSlice->layer_id], p_Vid->dec_picture);
   }
   update_ref_list(p_Vid->p_Dpb_layer[pSlice->view_id]);
+  // 更新短期参考帧
   update_ltref_list(p_Vid->p_Dpb_layer[pSlice->view_id]);
+  // 更新长期参考帧
   update_pic_num(pSlice);
   i = pSlice->view_id;
 #else
@@ -867,6 +871,9 @@ int decode_one_frame(DecoderParams *pDecoder)
     currSlice->is_reset_coeff_cr = FALSE;
 
     current_header = read_new_slice(currSlice);
+    // read 一个 new_slice 的时候
+    // 会先把前面的 PPS 和 SPS 都读出来
+
     //init;
     currSlice->current_header = current_header;
 
@@ -1249,7 +1256,12 @@ void reorder_lists(Slice *currSlice)
     {
       reorder_ref_pic_list(currSlice, LIST_0);
     }
+#if Avc2CodeValid
+    // avc2code - OutputFixed 
+    if (p_Vid->no_reference_picture == currSlice->listX[0][currSlice->num_ref_idx_active[LIST_0] - 1] && !p_Vid->SeqParSet[currSlice->pic_parameter_set_id].b_scc_IBC_flag)
+#else
     if (p_Vid->no_reference_picture == currSlice->listX[0][currSlice->num_ref_idx_active[LIST_0] - 1])
+#endif
     {
       if (p_Vid->non_conforming_stream)
         printf("RefPicList0[ %d ] is equal to 'no reference picture'\n", currSlice->num_ref_idx_active[LIST_0] - 1);
@@ -1415,11 +1427,20 @@ process_nalu:
       {
         if (p_Vid->recovery_point_found == 0)
         {
+#if Avc2CodeValid
+          // avc2code - OutputFixed 
+          if (nalu->nal_unit_type != NALU_TYPE_IDR && !p_Vid->SeqParSet[currSlice->pic_parameter_set_id].b_scc_IBC_flag)
+          {
+            printf("Warning: Decoding does not start with an IDR picture.\n");
+            p_Vid->non_conforming_stream = 1;
+          }
+#else
           if (nalu->nal_unit_type != NALU_TYPE_IDR)
           {
             printf("Warning: Decoding does not start with an IDR picture.\n");
             p_Vid->non_conforming_stream = 1;
           }
+#endif // Avc2CodeValid
           else
             p_Vid->non_conforming_stream = 0;
         }
@@ -2449,7 +2470,10 @@ static void init_cur_imgy(Slice *currSlice, VideoParameters *p_Vid)
   else
   {
     StorablePicture *vidref = p_Vid->no_reference_picture;
+    // 这个是一个暂存的图像缓存，目前还没有搞清楚要用它干嘛
     int noref = (currSlice->framepoc < p_Vid->recovery_poc);
+    // framepoc 当前帧的poc
+    // 
     int total_lists = currSlice->mb_aff_frame_flag ? 6 : (currSlice->slice_type==B_SLICE ? 2 : 1);
     //    for (j = 0; j < 6; j++) {  //for (j = 0; j < (currSlice->slice_type==B_SLICE?2:1); j++) { 
     for (j = 0; j < total_lists; j++) 

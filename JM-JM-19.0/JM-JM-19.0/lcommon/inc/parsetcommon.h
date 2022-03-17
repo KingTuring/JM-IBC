@@ -23,6 +23,9 @@
 // was received from the decoded NALU and should be used henceforth.
 // The structure names were chosen as indicated in the MPEG-4 AVC/H.264 syntax
 
+// avc2code - header
+#include "avc2code.h"
+
 #ifndef _PARSETCOMMON_H_
 #define _PARSETCOMMON_H_
 
@@ -158,6 +161,14 @@ typedef struct
   unsigned  int level_idc;                                        // u(8)
   unsigned  int seq_parameter_set_id;                             // ue(v)
   unsigned  int chroma_format_idc;                                // ue(v)
+
+#if Avc2CodeValid
+// avc2code - SpsFixed
+  Boolean	b_scc_IBC_flag;										  // u(1)
+  Boolean   b_scc_PLT_flag;										  // u(1)
+  Boolean   b_scc_ACT_flag;									      // u(1)
+  Boolean   b_scc_AMVR_flag;									  // u(1)
+#endif
 
   Boolean   seq_scaling_matrix_present_flag;                   // u(1)
   int       seq_scaling_list_present_flag[12];                 // u(1)

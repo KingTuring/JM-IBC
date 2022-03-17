@@ -1695,6 +1695,10 @@ static void read_one_macroblock_p_slice_cabac(Macroblock *currMB)
   //init NoMbPartLessThan8x8Flag
   currMB->NoMbPartLessThan8x8Flag = TRUE;
 
+  if (currMB->mb_type < 8) {
+      int stop = 0;
+  }
+
   if (currMB->mb_type == IPCM) // I_PCM mode
   {
     read_i_pcm_macroblock(currMB, partMap);

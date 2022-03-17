@@ -37,6 +37,10 @@ static void unmark_long_term_field_for_reference_by_frame_idx(DecodedPictureBuff
 static int is_short_term_reference(FrameStore* fs)
 {
 
+//int       is_used;                //!< 0=empty; 1=top; 2=bottom; 3=both fields (or frame)
+//int       is_reference;           //!< 0=not used for ref; 1=top used; 2=bottom used; 3=both fields (or frame) used
+//int       is_long_term;           //!< 0=not used for ref; 1=top used; 2=bottom used; 3=both fields (or frame) used
+//int       is_orig_reference;      //!< original marking by nal_ref_idc: 0=not used for ref; 1=top used; 2=bottom used; 3=both fields (or frame) used
   if (fs->is_used==3) // frame
   {
     if ((fs->frame->used_for_reference)&&(!fs->frame->is_long_term))
@@ -237,21 +241,27 @@ StorablePicture*  get_long_term_pic(Slice *currSlice, DecodedPictureBuffer *p_Dp
  */
 void update_ref_list(DecodedPictureBuffer *p_Dpb)
 {
+  // 更新参考帧列表
+  // 是用 fs 来更新 fs_ref
   unsigned i, j;
   for (i=0, j=0; i<p_Dpb->used_size; i++)
   {
     if (is_short_term_reference(p_Dpb->fs[i]))
     {
       p_Dpb->fs_ref[j++]=p_Dpb->fs[i];
+      // 要知道 fs_ref 和 fs 的区别以及作用
     }
   }
 
   p_Dpb->ref_frames_in_buffer = j;
+  // p_Dpb DPB
+  // 要监视一下这个变量一直做出的变化
 
   while (j<p_Dpb->size)
   {
     p_Dpb->fs_ref[j++]=NULL;
   }
+  // 剩余的空间 都标记为 NULL
 }
 
 

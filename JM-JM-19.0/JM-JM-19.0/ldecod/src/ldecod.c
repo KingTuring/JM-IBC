@@ -1070,6 +1070,8 @@ void ClearDecPicList(VideoParameters *p_Vid)
 {
   DecodedPicList *pPic = p_Vid->pDecOuputPic, *pPrior = NULL;
   //find the head first;
+  // 先找到第一个可用的 pPic
+  // pDecOuputPic 中存的是链表
   while(pPic && !pPic->bValid)
   {
     pPrior = pPic;

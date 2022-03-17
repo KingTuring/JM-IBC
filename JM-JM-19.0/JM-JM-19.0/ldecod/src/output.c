@@ -839,6 +839,8 @@ void write_stored_frame( VideoParameters *p_Vid, FrameStore *fs, int p_out)
     if (fs->recovery_frame)
       p_Vid->recovery_flag = 1;
     if ((!p_Vid->non_conforming_stream) || p_Vid->recovery_flag)
+    // dj 这里发现，打开IBC之后，没有输出 重建帧
+    // 原因是 non_conforming_stream 变成了 1
       write_picture(p_Vid, fs->frame, p_out, FRAME);
   }
 

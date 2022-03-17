@@ -12,6 +12,9 @@
  ***********************************************************************
  */
 
+// avc2code - header
+#include "avc2code.h"
+
 #include "global.h"
 #include "image.h"
 #include "parsetcommon.h"
@@ -112,6 +115,17 @@ int InterpretSPS (VideoParameters *p_Vid, DataPartition *p, seq_parameter_set_rb
   sps->level_idc                              = read_u_v  (8, "SPS: level_idc"                             , s, &p_Dec->UsedBits);
 
   sps->seq_parameter_set_id                   = read_ue_v ("SPS: seq_parameter_set_id"                     , s, &p_Dec->UsedBits);
+
+#if Avc2CodeValid
+  // avc2code - SpsFixed
+  int b_scc_extension_flag                    = read_u_1  (   "SPS: scc_extension_flag"                    , s, &p_Dec->UsedBits);
+  if (b_scc_extension_flag) {
+      sps->b_scc_IBC_flag                     = read_u_1  (   "SPS: b_scc_IBC_flag"                        , s, &p_Dec->UsedBits);
+      sps->b_scc_PLT_flag                     = read_u_1  (   "SPS: b_scc_PLT_flag"                        , s, &p_Dec->UsedBits);
+      sps->b_scc_ACT_flag                     = read_u_1  (   "SPS: b_scc_ACT_flag"                        , s, &p_Dec->UsedBits);
+      sps->b_scc_AMVR_flag                    = read_u_1  (   "SPS: b_scc_AMVR_flag"                       , s, &p_Dec->UsedBits);
+  }
+#endif
 
   // Fidelity Range Extensions stuff
   sps->chroma_format_idc = 1;

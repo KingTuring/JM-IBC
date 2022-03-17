@@ -224,7 +224,7 @@ void check_num_ref(DecodedPictureBuffer *p_Dpb)
  ************************************************************************
  * \brief
  *    Allocate memory for decoded picture buffer and initialize with sane values.
- *
+ *    为 DPB 分配内存，并以相同值进行初始化
  ************************************************************************
  */
 void init_dpb(VideoParameters *p_Vid, DecodedPictureBuffer *p_Dpb, int type)
@@ -239,7 +239,10 @@ void init_dpb(VideoParameters *p_Vid, DecodedPictureBuffer *p_Dpb, int type)
   }
 
   p_Dpb->size = getDpbSize(p_Vid, active_sps) + p_Vid->p_Inp->dpb_plus[type==2? 1: 0];
+  // getDpbSize 是根据 level 和 profile 决定的
+  // p_Dpb 大小是 6，
   p_Dpb->num_ref_frames = active_sps->num_ref_frames; 
+  // 最大参考帧数量是 5
 
 #if (MVC_EXTENSION_ENABLE)
   if ((unsigned int)active_sps->max_dec_frame_buffering < active_sps->num_ref_frames)
@@ -257,14 +260,17 @@ void init_dpb(VideoParameters *p_Vid, DecodedPictureBuffer *p_Dpb, int type)
   p_Dpb->ltref_frames_in_buffer = 0;
 
   p_Dpb->fs = calloc(p_Dpb->size, sizeof (FrameStore*));
+  // fs 放了 p_Dpb->size 个 FrameStore*
   if (NULL==p_Dpb->fs)
     no_mem_exit("init_dpb: p_Dpb->fs");
 
   p_Dpb->fs_ref = calloc(p_Dpb->size, sizeof (FrameStore*));
+  // 短期参考帧放在这里
   if (NULL==p_Dpb->fs_ref)
     no_mem_exit("init_dpb: p_Dpb->fs_ref");
 
   p_Dpb->fs_ltref = calloc(p_Dpb->size, sizeof (FrameStore*));
+  // 长期参考帧存在这里
   if (NULL==p_Dpb->fs_ltref)
     no_mem_exit("init_dpb: p_Dpb->fs_ltref");
 
@@ -309,6 +315,7 @@ void init_dpb(VideoParameters *p_Vid, DecodedPictureBuffer *p_Dpb, int type)
   }
   */
   /* allocate a dummy storable picture */
+  // 分配一个虚拟的可存储的图片
   if(!p_Vid->no_reference_picture)
   {
     p_Vid->no_reference_picture = alloc_storable_picture (p_Vid, FRAME, p_Vid->width, p_Vid->height, p_Vid->width_cr, p_Vid->height_cr, 1);

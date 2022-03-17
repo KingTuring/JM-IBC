@@ -572,6 +572,7 @@ typedef struct slice
 typedef struct decodedpic_t
 {
   int bValid;                 //0: invalid, 1: valid, 3: valid for 3D output;
+  // 是否可用
   int iViewId;                //-1: single view, >=0 multiview[VIEW1|VIEW0];
   int iPOC;
   int iYUVFormat;             //0: 4:0:0, 1: 4:2:0, 2: 4:2:2, 3: 4:4:4
@@ -680,6 +681,8 @@ typedef struct video_par
   seq_parameter_set_rbsp_t SeqParSet[MAXSPS];
   pic_parameter_set_rbsp_t PicParSet[MAXPPS];
   struct decoded_picture_buffer *p_Dpb_layer[MAX_NUM_DPB_LAYERS];
+  // p_Dpb_layer DPB
+  // question? 为什么 分两层
   CodingParameters *p_EncodePar[MAX_NUM_DPB_LAYERS];
   LayerParameters *p_LayerPar[MAX_NUM_DPB_LAYERS];
 
@@ -812,6 +815,13 @@ typedef struct video_par
   int p_out;                       //!< file descriptor to output YUV file
 #if (MVC_EXTENSION_ENABLE)
   int p_out_mvc[MAX_VIEW_NUM];     //!< file descriptor to output YUV file for MVC
+  // 如果打开了 MVC_EXTENSION_ENABLE
+  // 重建文件存在 p_out 
+  // 不然，重建文件存在了 p_out_mvc
+  // 这里涉及到了 C 语言的文件打开 和 文件关闭
+  // 文件打开是 open 函数，返回值 -1 是打开失败
+  // 0 1 2 分别是标准输出、标准错误、标准警告流
+  // 所以返回值是其他正整数会是当前的文件描述
 #endif
   int p_ref;                       //!< pointer to input original reference YUV file file
 
@@ -882,7 +892,9 @@ typedef struct video_par
 
   ImageData tempData3;
   DecodedPicList *pDecOuputPic;
+  // 以 链表 的形式存放解码后的缓存帧
   int iDeblockMode;  //0: deblock in picture, 1: deblock in slice;
+  // 标记该帧是否进行滤波
   struct nalu_t *nalu;
   int iLumaPadX;
   int iLumaPadY;
@@ -969,6 +981,7 @@ typedef struct inp_par
 {
   char infile[FILE_NAME_SIZE];                       //!< H.264 inputfile
   char outfile[FILE_NAME_SIZE];                      //!< Decoded YUV 4:2:0 output
+  // 重建帧输出文件名
   char reffile[FILE_NAME_SIZE];                      //!< Optional YUV 4:2:0 reference file for SNR measurement
 
   int FileFormat;                         //!< File format of the Input file, PAR_OF_ANNEXB or PAR_OF_RTP

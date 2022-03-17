@@ -1240,6 +1240,9 @@ static int decode_one_component_p_slice(Macroblock *currMB, ColorPlane curr_plan
 {
   //For residual DPCM
   currMB->ipmode_DPCM = NO_INTRA_PMODE; 
+  if (currMB->mb_type < 8) {
+      int stop = 0;
+  }
   if(currMB->mb_type == IPCM)
     mb_pred_ipcm(currMB);
   else if (currMB->mb_type==I16MB)
