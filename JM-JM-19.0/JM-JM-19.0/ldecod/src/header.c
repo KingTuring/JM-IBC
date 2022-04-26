@@ -125,7 +125,13 @@ int RestOfSliceHeader(Slice *currSlice)
   currSlice->frame_num = read_u_v (active_sps->log2_max_frame_num_minus4 + 4, "SH: frame_num", currStream, &p_Dec->UsedBits);
 
   /* Tian Dong: frame_num gap processing, if found */
-  if(currSlice->idr_flag) //if (p_Vid->idr_flag)
+
+
+  if(currSlice->idr_flag 
+#if IBC
+      || currSlice->nal_reference_idc == 3
+#endif // Avc2CodeValid
+      ) //if (p_Vid->idr_flag)
   {
     p_Vid->pre_frame_num = currSlice->frame_num;
     // picture error concealment

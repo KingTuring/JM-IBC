@@ -207,11 +207,11 @@ typedef struct macroblock_dec
   int mbAddrA, mbAddrB, mbAddrC, mbAddrD;
   Boolean mbAvailA, mbAvailB, mbAvailC, mbAvailD;
   BlockPos mb;
-  int block_x;
-  int block_y;
+  int block_x;      //  以 4*4 的最小子块为单位，当前块的坐标
+  int block_y;      //  以 4*4 的最小子块为单位，当前块的坐标
   int block_y_aff;
-  int pix_x;
-  int pix_y;
+  int pix_x;        //  以像素为单位，当前块的坐标
+  int pix_y;        //  以像素为单位，当前块的坐标
   int pix_c_x;
   int pix_c_y;
 
@@ -683,6 +683,7 @@ typedef struct video_par
   struct decoded_picture_buffer *p_Dpb_layer[MAX_NUM_DPB_LAYERS];
   // p_Dpb_layer DPB
   // question? 为什么 分两层
+  // 因为对于 SVC 来说，有一层提供给 扩展层 来用
   CodingParameters *p_EncodePar[MAX_NUM_DPB_LAYERS];
   LayerParameters *p_LayerPar[MAX_NUM_DPB_LAYERS];
 
@@ -962,6 +963,10 @@ typedef struct video_par
 /******************* end deprecative variables; ***************************************/
 
   struct dec_stat_parameters *dec_stats;
+
+#if FixSEI
+  int scc_extension;
+#endif
 } VideoParameters;
 
 

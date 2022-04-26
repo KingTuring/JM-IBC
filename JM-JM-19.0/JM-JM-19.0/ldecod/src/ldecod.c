@@ -137,6 +137,8 @@ static void alloc_video_params( VideoParameters **p_Vid)
     no_mem_exit("alloc_video_params: p_Vid->snr");  
 
   // Allocate new dpb buffer
+  // svc 分层编码的时候
+  // 每一层需要有： DPB_buffer  EncoderPar  LayerPar
   for (i = 0; i < MAX_NUM_DPB_LAYERS; i++)
   {
     if (((*p_Vid)->p_Dpb_layer[i] =  (DecodedPictureBuffer*)calloc(1, sizeof(DecodedPictureBuffer)))==NULL) 

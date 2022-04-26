@@ -22,6 +22,7 @@
 #include "macroblock.h"
 #include "memalloc.h"
 #include "dec_statistics.h"
+#include "avc2code.h"
 
 int allocate_pred_mem(Slice *currSlice)
 {
@@ -893,6 +894,60 @@ static void get_luma_31(imgpel **block, imgpel **cur_imgY, int block_size_y, int
   }      
 }
 
+#if RecFrameOutput
+void print_one_frame1(Macroblock* currMB) {
+    int cols, rows;
+    cols = currMB->p_Slice->dec_picture->size_x;
+    //cols = currMB->p_Slice->dec_picture->iLumaStride;
+    rows = currMB->p_Slice->dec_picture->size_y;
+    //rows = currMB->p_Slice->dec_picture-;
+    unsigned char* cache = calloc(cols * rows, 1);
+    if (cache == NULL) {
+        printf("calloc error");
+        return;
+    }
+    unsigned char* start = cache;
+    int row = 0;
+    while (row < rows)
+    {
+        for (int col = 0; col < cols; ++col) {
+            start[col] = currMB->p_Slice->dec_picture->imgY[row][col];
+        }
+        start += cols;
+        ++row;
+    }
+    FILE* write_file = fopen("dj_rec_sizex.yuv", "ab");
+    fwrite(cache, 1, cols * rows, write_file);
+    fclose(write_file);
+}
+
+void print_one_frame2(Macroblock* currMB) {
+    int cols, rows;
+    //cols = currMB->p_Slice->dec_picture->size_x;
+    cols = currMB->p_Slice->dec_picture->iLumaStride;
+    rows = currMB->p_Slice->dec_picture->size_y;
+    //rows = currMB->p_Slice->dec_picture-;
+    unsigned char* cache = calloc(cols * rows, 1);
+    if (cache == NULL) {
+        printf("calloc error");
+        return;
+    }
+    unsigned char* start = cache;
+    int row = 0;
+    while (row < rows)
+    {
+        for (int col = 0; col < cols; ++col) {
+            start[col] = currMB->p_Slice->dec_picture->imgY[row][col];
+        }
+        start += cols;
+        ++row;
+    }
+    FILE* write_file = fopen("dj_rec_iLumaStride.yuv", "ab");
+    fwrite(cache, 1, cols * rows, write_file);
+    fclose(write_file);
+}
+#endif
+
 /*!
  ************************************************************************
  * \brief
@@ -902,20 +957,34 @@ static void get_luma_31(imgpel **block, imgpel **cur_imgY, int block_size_y, int
 void get_block_luma(StorablePicture *curr_ref, int x_pos, int y_pos, int block_size_x, int block_size_y, imgpel **block,
                     int shift_x, int maxold_x, int maxold_y, int **tmp_res, int max_imgpel_value, imgpel no_ref_value, Macroblock *currMB)
 {
+
   if (curr_ref->no_ref) {
     //printf("list[ref_frame] is equal to 'no reference picture' before RAP\n");
     memset(block[0],no_ref_value,block_size_y * block_size_x * sizeof(imgpel));
   }
   else
   {
-    imgpel **cur_imgY = (currMB->p_Vid->separate_colour_plane_flag && currMB->p_Slice->colour_plane_id>PLANE_Y)? curr_ref->imgUV[currMB->p_Slice->colour_plane_id-1] : curr_ref->cur_imgY;
+      imgpel** cur_imgY = (currMB->p_Vid->separate_colour_plane_flag && currMB->p_Slice->colour_plane_id > PLANE_Y) ? curr_ref->imgUV[currMB->p_Slice->colour_plane_id - 1] : curr_ref->cur_imgY;
+#if IBC
+      if(currMB->p_Slice->nal_reference_idc == 3) cur_imgY = (currMB->p_Vid->separate_colour_plane_flag && currMB->p_Slice->colour_plane_id > PLANE_Y) ? curr_ref->imgUV[currMB->p_Slice->colour_plane_id - 1] : curr_ref->imgY;
+      //cur_imgY = (currMB->p_Vid->separate_colour_plane_flag && currMB->p_Slice->colour_plane_id > PLANE_Y) ? curr_ref->imgUV[currMB->p_Slice->colour_plane_id - 1] : curr_ref->imgY;
+#endif
+      
     int dx = (x_pos & 3);
     int dy = (y_pos & 3);
     x_pos >>= 2;
     y_pos >>= 2;
     x_pos = iClip3(-18, maxold_x+2, x_pos);
     y_pos = iClip3(-10, maxold_y+2, y_pos);
-
+#if  RecFrameOutput
+    //print_one_frame1(currMB);
+    //print_one_frame2(currMB);
+#endif
+    //printf("%d %d\n", y_pos, x_pos);
+    if (currMB->pix_x == 762 && currMB->pix_y == 32) {
+        //print_one_frame1(currMB);
+        int x = 0;
+    }
     if (dx == 0 && dy == 0)
       get_block_00(&block[0][0], &cur_imgY[y_pos][x_pos], curr_ref->iLumaStride, block_size_y);
     else
@@ -1361,10 +1430,20 @@ static void perform_mc_single_wp(Macroblock *currMB, ColorPlane pl, StorablePict
   short       ref_idx = mv_info->ref_idx[pred_dir];
   // ref_idx :  参考帧 索引
   // pred_dir:  预测方向
+  // 存在了 mv_info 里面
   short       ref_idx_wp = ref_idx;
+  // mv_info->mv[pred_dir] 
+  // 存两个方向的运动向量
   MotionVector *mv_array = &mv_info->mv[pred_dir];
   int list_offset = currMB->list_offset;
-  StorablePicture *list = currSlice->listX[list_offset + pred_dir][ref_idx];
+
+  
+#if IBC
+  StorablePicture* list = currMB->p_Slice->dec_picture;
+#else
+  StorablePicture* list = currSlice->listX[list_offset + pred_dir][ref_idx];
+#endif
+  // list_offset 在打开 mb映射 的时候 才有用
   // list 参考帧
   int vec1_x, vec1_y;
   // vars for get_block_luma
@@ -1382,6 +1461,8 @@ static void perform_mc_single_wp(Macroblock *currMB, ColorPlane pl, StorablePict
 #endif
 
   check_motion_vector_range(mv_array, currSlice);
+  // 根据当前的像素点位置 以及 mv
+  // 得到参考像素的 像素点位置
   vec1_x = i4 * mv_mul + mv_array->mv_x;
   vec1_y = (currMB->block_y_aff + j) * mv_mul + mv_array->mv_y;
   if(block_size_y > (p_Vid->iLumaPadY-4) && CheckVertMV(currMB, vec1_y, block_size_y))
@@ -1390,6 +1471,7 @@ static void perform_mc_single_wp(Macroblock *currMB, ColorPlane pl, StorablePict
     get_block_luma(list, vec1_x, vec1_y+BLOCK_SIZE_8x8_SP, block_size_x, block_size_y-BLOCK_SIZE_8x8, tmp_block_l0+BLOCK_SIZE_8x8, shift_x,maxold_x,maxold_y,tmp_res,max_imgpel_value,no_ref_value, currMB);
   }
   else
+    // 进行 1/4 像素插值
     get_block_luma(list, vec1_x, vec1_y, block_size_x, block_size_y, tmp_block_l0,shift_x,maxold_x,maxold_y,tmp_res,max_imgpel_value,no_ref_value, currMB);
   
 
@@ -1400,6 +1482,8 @@ static void perform_mc_single_wp(Macroblock *currMB, ColorPlane pl, StorablePict
     alpha_l0  = currSlice->wp_weight[pred_dir][ref_idx_wp][pl];
     wp_offset = currSlice->wp_offset[pred_dir][ref_idx_wp][pl];
     wp_denom  = pl > 0 ? currSlice->chroma_log2_weight_denom : currSlice->luma_log2_weight_denom;
+    // 加权预测
+    // 预测后放到 currSlice->mb_pred[pl][joff]
     weighted_mc_prediction(&currSlice->mb_pred[pl][joff], tmp_block_l0, block_size_y, block_size_x, ioff, alpha_l0, wp_offset, wp_denom, max_imgpel_value);
   }
 
@@ -1461,7 +1545,12 @@ static void perform_mc_single(Macroblock *currMB, ColorPlane pl, StorablePicture
   MotionVector *mv_array = &mv_info->mv[pred_dir];
   short          ref_idx =  mv_info->ref_idx[pred_dir];  
   int list_offset = currMB->list_offset;
-  StorablePicture *list = currSlice->listX[list_offset + pred_dir][ref_idx];
+
+  StorablePicture* list = currSlice->listX[list_offset + pred_dir][ref_idx];
+#if IBC
+  if (currMB->p_Slice->nal_reference_idc == 3) list = currMB->p_Slice->dec_picture;
+#endif
+
   int vec1_x, vec1_y;
   // vars for get_block_luma
   int maxold_x = dec_picture->size_x_m1;
@@ -1480,9 +1569,16 @@ static void perform_mc_single(Macroblock *currMB, ColorPlane pl, StorablePicture
     //printf("motion vector %d %d\n", mv_array->mv_x, mv_array->mv_y);
 
   check_motion_vector_range(mv_array, currSlice);
+  // mv_mul : 以 1/4 像素为单位时的坐标
+  // i4 : 以 4*4 块为单位时的坐标
   vec1_x = i4 * mv_mul + mv_array->mv_x;
   vec1_y = (currMB->block_y_aff + j) * mv_mul + mv_array->mv_y;
   
+  if (currMB->pix_x == 736 && currMB->pix_y == 32) {
+      //print_one_frame1(currMB);
+      int x = 0;
+  }
+
   if (block_size_y > (p_Vid->iLumaPadY-4) && CheckVertMV(currMB, vec1_y, block_size_y))
   {
     get_block_luma(list, vec1_x, vec1_y, block_size_x, BLOCK_SIZE_8x8, tmp_block_l0, shift_x,maxold_x,maxold_y,tmp_res,max_imgpel_value,no_ref_value, currMB);
@@ -1490,7 +1586,9 @@ static void perform_mc_single(Macroblock *currMB, ColorPlane pl, StorablePicture
   }
   else
     get_block_luma(list, vec1_x, vec1_y, block_size_x, block_size_y, tmp_block_l0,shift_x,maxold_x,maxold_y,tmp_res,max_imgpel_value,no_ref_value, currMB);
-
+  //    vec1_x
+  //    vec1_y
+  
   mc_prediction(&currSlice->mb_pred[pl][joff], tmp_block_l0, block_size_y, block_size_x, ioff); 
 
   if ((chroma_format_idc != YUV400) && (chroma_format_idc != YUV444) ) 

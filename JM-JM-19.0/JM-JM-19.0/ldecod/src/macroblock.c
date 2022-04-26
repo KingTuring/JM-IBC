@@ -238,14 +238,38 @@ void read_delta_quant(SyntaxElement *currSE, DataPartition *dP, Macroblock *curr
  */
 static void readMBRefPictureIdx (SyntaxElement *currSE, DataPartition *dP, Macroblock *currMB, PicMotionParams **mv_info, int list, int step_v0, int step_h0)
 {
+//PSKIP = 0,
+//BSKIP_DIRECT = 0,
+//P16x16 = 1,
+//P16x8 = 2,
+//P8x16 = 3,
+//SMB8x8 = 4,
+//SMB8x4 = 5,
+//SMB4x8 = 6,
+//SMB4x4 = 7,
+//P8x8 = 8,
+//I4MB = 9,
+//I16MB = 10,
+//IBLOCK = 11,
+//SI4MB = 12,
+//I8MB = 13,
+//IPCM = 14,
+//MAXMODE = 15
+
   if (currMB->mb_type == 1)
   {
+    
+#if IBC
+    if (currMB->p_Slice->nal_reference_idc == 3) {
+
+    }
+    else 
+#endif
     if ((currMB->b8pdir[0] == list || currMB->b8pdir[0] == BI_PRED))
     {
       int j, i;
       char refframe;
       
-
       currMB->subblock_x = 0;
       currMB->subblock_y = 0;
       refframe = currMB->readRefPictureIdx(currMB, currSE, dP, 1, list);
@@ -320,6 +344,13 @@ static void readMBRefPictureIdx (SyntaxElement *currSE, DataPartition *dP, Macro
   }
   else
   {
+#if IBC
+      /*if (currMB->p_Slice->nal_reference_idc == 3) {
+
+      }
+      else{*/
+#endif
+
     int k, j, i, j0, i0;
     char refframe;
 
@@ -348,6 +379,10 @@ static void readMBRefPictureIdx (SyntaxElement *currSE, DataPartition *dP, Macro
         }
       }
     }
+
+#if IBC
+        //}
+#endif
   }
 }
 
@@ -359,6 +394,24 @@ static void readMBRefPictureIdx (SyntaxElement *currSE, DataPartition *dP, Macro
  */
 static void readMBMotionVectors (SyntaxElement *currSE, DataPartition *dP, Macroblock *currMB, int list, int step_h0, int step_v0)
 {
+//PSKIP = 0,
+//BSKIP_DIRECT = 0,
+//P16x16 = 1,
+//P16x8 = 2,
+//P8x16 = 3,
+//SMB8x8 = 4,
+//SMB8x4 = 5,
+//SMB4x8 = 6,
+//SMB4x4 = 7,
+//P8x8 = 8,
+//I4MB = 9,
+//I16MB = 10,
+//IBLOCK = 11,
+//SI4MB = 12,
+//I8MB = 13,
+//IPCM = 14,
+//MAXMODE = 15
+
   if (currMB->mb_type == 1)
   {
     if ((currMB->b8pdir[0] == list || currMB->b8pdir[0]== BI_PRED))//has forward vector
@@ -547,12 +600,12 @@ void start_macroblock(Slice *currSlice, Macroblock **currMB)
 {
   VideoParameters *p_Vid = currSlice->p_Vid;
   int mb_nr = currSlice->current_mb_nr;
-  
-  *currMB = &currSlice->mb_data[mb_nr]; 
+    
+  *currMB = &currSlice->mb_data[mb_nr];     // 当前 mb 的信息，里面还有信息的提取函数
 
-  (*currMB)->p_Slice = currSlice;
-  (*currMB)->p_Vid   = p_Vid;  
-  (*currMB)->mbAddrX = mb_nr;
+  (*currMB)->p_Slice = currSlice;   //  slice 信息
+  (*currMB)->p_Vid   = p_Vid;       //  video 信息
+  (*currMB)->mbAddrX = mb_nr;       //  
 
   //assert (mb_nr < (int) p_Vid->PicSizeInMbs);
 
@@ -598,11 +651,13 @@ void start_macroblock(Slice *currSlice, Macroblock **currMB)
   {
     if (currSlice->slice_type != B_SLICE)
       fast_memset((*currMB)->mvd[0][0][0], 0, MB_BLOCK_PARTITIONS * 2 * sizeof(short));
+      // P 块的 mvd 内存分配
     else
       fast_memset((*currMB)->mvd[0][0][0], 0, 2 * MB_BLOCK_PARTITIONS * 2 * sizeof(short));
   }
   
   fast_memset((*currMB)->s_cbp, 0, 3 * sizeof(CBPStructure));
+  // CBP 内存分配
 
   // initialize currSlice->mb_rres
   if (currSlice->is_reset_coeff == FALSE)
@@ -1214,10 +1269,26 @@ void check_dp_neighbors (Macroblock *currMB)
  ************************************************************************
  */
 
+//typedef enum
+//{
+//    // YUV
+//    PLANE_Y = 0,  // PLANE_Y
+//    PLANE_U = 1,  // PLANE_Cb
+//    PLANE_V = 2,  // PLANE_Cr
+//    // RGB
+//    PLANE_G = 0,
+//    PLANE_B = 1,
+//    PLANE_R = 2
+//} ColorPlane;
+
+// 参数解释
+// currMB: 当前 mb 信息，curr_plane: 当前解码的平面标号，currImg: 解码的重建缓存，dec_picture: 解码图像信息
 static int decode_one_component_i_slice(Macroblock *currMB, ColorPlane curr_plane, imgpel **currImg, StorablePicture *dec_picture)
 {
   //For residual DPCM
   currMB->ipmode_DPCM = NO_INTRA_PMODE; 
+  // ipmode_DPCM 帧内预测模式
+
   if(currMB->mb_type == IPCM)
     mb_pred_ipcm(currMB);
   else if (currMB->mb_type==I16MB)
@@ -1240,7 +1311,7 @@ static int decode_one_component_p_slice(Macroblock *currMB, ColorPlane curr_plan
 {
   //For residual DPCM
   currMB->ipmode_DPCM = NO_INTRA_PMODE; 
-  if (currMB->mb_type < 8) {
+  if (currMB->pix_x == 736 && currMB->pix_y == 32) {
       int stop = 0;
   }
   if(currMB->mb_type == IPCM)

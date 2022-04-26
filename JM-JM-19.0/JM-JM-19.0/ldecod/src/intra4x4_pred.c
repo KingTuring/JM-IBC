@@ -72,6 +72,9 @@ static int intra4x4_dc_pred(Macroblock *currMB,
   int j;
   int s0 = 0;  
   imgpel **imgY = (pl) ? currSlice->dec_picture->imgUV[pl - 1] : currSlice->dec_picture->imgY;
+  // imgY 存 Y 平面
+  // imgUV 存 UV 平面
+  // 也就是说，每一个 mb 把重建图像直接 重建到 当前 slice 的 dec_picture 中
   imgpel *curpel = NULL;
 
   PixelPos pix_a, pix_b; 
@@ -79,11 +82,15 @@ static int intra4x4_dc_pred(Macroblock *currMB,
   int block_available_up;
   int block_available_left;  
 
-  imgpel **mb_pred = currSlice->mb_pred[pl];    
+  imgpel **mb_pred = currSlice->mb_pred[pl];
+  // 这个是平面中每个 mb 的 预测像素
+  // 也就是滤波前的像素
 
-  getNonAffNeighbour(currMB, ioff - 1, joff   , p_Vid->mb_size[IS_LUMA], &pix_a);
-  getNonAffNeighbour(currMB, ioff    , joff -1, p_Vid->mb_size[IS_LUMA], &pix_b);
+  getNonAffNeighbour(currMB, ioff - 1, joff   , p_Vid->mb_size[IS_LUMA], &pix_a);   // 左侧 4*4 block
+  getNonAffNeighbour(currMB, ioff    , joff -1, p_Vid->mb_size[IS_LUMA], &pix_b);   // 上面 4*4 block
 
+  // 在受限的 I 帧内预测情况下
+  // I 帧的参考块，只能来自于 I 帧或 SI 帧
   if (p_Vid->active_pps->constrained_intra_pred_flag)
   {
     block_available_left = pix_a.available ? currSlice->intra_block [pix_a.mb_addr] : 0;
@@ -104,6 +111,7 @@ static int intra4x4_dc_pred(Macroblock *currMB,
     s0 += *curpel++;
     s0 += *curpel;
   }
+  // s0 为上面一行的像素求和
 
   if (block_available_left)
   {
@@ -114,6 +122,10 @@ static int intra4x4_dc_pred(Macroblock *currMB,
     s0 += *(*(img_pred ++) + pos_x);
     s0 += *(*(img_pred   ) + pos_x);
   }
+  // 再加上左边一列的像素值
+  // 这也说明，dec_picture 中的像素存储用的是二维矩阵
+  // 第一维：行数
+  // 第二维：每一行的像素
 
   if (block_available_up && block_available_left)
   {
@@ -134,6 +146,8 @@ static int intra4x4_dc_pred(Macroblock *currMB,
   {
     // top left corner, nothing to predict from
     s0 = p_Vid->dc_pred_value_comp[pl];
+    // 如果 左侧 和 上侧都没有可用元素
+    // 就用 dc 分量的视频参数预测值
   }
 
   for (j=joff; j < joff + BLOCK_SIZE; ++j)
@@ -144,6 +158,10 @@ static int intra4x4_dc_pred(Macroblock *currMB,
     mb_pred[j][ioff + 2] = (imgpel) s0;
     mb_pred[j][ioff + 3] = (imgpel) s0;
   }
+  // 所以呢
+  // dc 的预测就是这样的
+  // 尽快能的用 当前块 上面 和 左边 的所有可用像素
+  // 预测值存在 mb_pred 平面
   return DECODING_OK;
 }
 

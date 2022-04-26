@@ -162,8 +162,9 @@ typedef struct
   unsigned  int seq_parameter_set_id;                             // ue(v)
   unsigned  int chroma_format_idc;                                // ue(v)
 
-#if Avc2CodeValid
+#if FixStream
 // avc2code - SpsFixed
+  int b_scc_extension_flag;
   Boolean	b_scc_IBC_flag;										  // u(1)
   Boolean   b_scc_PLT_flag;										  // u(1)
   Boolean   b_scc_ACT_flag;									      // u(1)

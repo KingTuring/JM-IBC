@@ -45,6 +45,7 @@ extern void get_strength_hor_MBAff     (byte *Strength, Macroblock *MbQ, int edg
  */
 void DeblockPicture(VideoParameters *p_Vid, StorablePicture *p)
 {
+
   unsigned i;
   if (p->mb_aff_frame_flag)
   {

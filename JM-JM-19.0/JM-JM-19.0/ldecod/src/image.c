@@ -963,6 +963,33 @@ int decode_one_frame(DecoderParams *pDecoder)
     p_Vid->last_dec_poc = p_Vid->dec_picture->top_poc;
   else if(p_Vid->dec_picture->structure == BOTTOM_FIELD)
     p_Vid->last_dec_poc = p_Vid->dec_picture->bottom_poc;
+
+
+  //dj
+  int cols, rows;
+  cols = p_Vid->dec_picture->size_x;
+  //cols = currMB->p_Slice->dec_picture->iLumaStride;
+  rows = p_Vid->dec_picture->size_y;
+  //rows = currMB->p_Slice->dec_picture-;
+  unsigned char* cache = calloc(cols * rows, 1);
+  if (cache == NULL) {
+      printf("calloc error");
+      return;
+  }
+  unsigned char* start = cache;
+  int row = 0;
+  while (row < rows)
+  {
+      for (int col = 0; col < cols; ++col) {
+          start[col] = p_Vid->dec_picture->imgY[row][col];
+      }
+      start += cols;
+      ++row;
+  }
+  FILE* write_file = fopen("dj_rec_sizex.yuv", "ab");
+  fwrite(cache, 1, cols * rows, write_file);
+  fclose(write_file);
+
   exit_picture(p_Vid, &p_Vid->dec_picture);
   p_Vid->previous_frame_num = ppSliceList[0]->frame_num;
   return (iRet);
@@ -1256,7 +1283,7 @@ void reorder_lists(Slice *currSlice)
     {
       reorder_ref_pic_list(currSlice, LIST_0);
     }
-#if Avc2CodeValid
+#if IBC
     // avc2code - OutputFixed 
     if (p_Vid->no_reference_picture == currSlice->listX[0][currSlice->num_ref_idx_active[LIST_0] - 1] && !p_Vid->SeqParSet[currSlice->pic_parameter_set_id].b_scc_IBC_flag)
 #else
@@ -1427,7 +1454,7 @@ process_nalu:
       {
         if (p_Vid->recovery_point_found == 0)
         {
-#if Avc2CodeValid
+#if IBC
           // avc2code - OutputFixed 
           if (nalu->nal_unit_type != NALU_TYPE_IDR && !p_Vid->SeqParSet[currSlice->pic_parameter_set_id].b_scc_IBC_flag)
           {
@@ -2475,6 +2502,8 @@ static void init_cur_imgy(Slice *currSlice, VideoParameters *p_Vid)
     // framepoc 当前帧的poc
     // 
     int total_lists = currSlice->mb_aff_frame_flag ? 6 : (currSlice->slice_type==B_SLICE ? 2 : 1);
+    // 打开 mb 自适应映射，就是 6 个参考列表
+    // 不打开就是 B 2个，P 1个
     //    for (j = 0; j < 6; j++) {  //for (j = 0; j < (currSlice->slice_type==B_SLICE?2:1); j++) { 
     for (j = 0; j < total_lists; j++) 
     {
@@ -2533,6 +2562,8 @@ void decode_one_slice(Slice *currSlice)
 
   //reset_ec_flags(p_Vid);
 
+
+  // 逐个完成一个 slice 中的所有 mb 解码
   while (end_of_slice == FALSE) // loop over macroblocks
   {
 
@@ -2542,6 +2573,9 @@ void decode_one_slice(Slice *currSlice)
 
     // Initializes the current macroblock
     start_macroblock(currSlice, &currMB);
+    // 初始化当前 mb 的各种参数和信息为初始值
+    // 为编码过程中的参数或者信息 分配内存
+
     // Get the syntax elements from the NAL
     currSlice->read_one_macroblock(currMB);
     decode_one_macroblock(currMB, currSlice->dec_picture);

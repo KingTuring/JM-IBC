@@ -42,6 +42,15 @@ extern int  get_colocated_info_4x4 (Macroblock *currMB, StorablePicture *list1, 
 int mb_pred_intra4x4(Macroblock *currMB, ColorPlane curr_plane, imgpel **currImg, StorablePicture *dec_picture)
 {
   Slice *currSlice = currMB->p_Slice;
+
+  //typedef enum {
+  //    CF_UNKNOWN = -1,     //!< Unknown color format
+  //    YUV400 = 0,     //!< Monochrome
+  //    YUV420 = 1,     //!< 4:2:0
+  //    YUV422 = 2,     //!< 4:2:2
+  //    YUV444 = 3      //!< 4:4:4
+  //} ColorFormat;
+
   int yuv = dec_picture->chroma_format_idc - 1;
   int i=0, j=0,k, j4=0,i4=0;  
   int j_pos, i_pos;
@@ -55,11 +64,16 @@ int mb_pred_intra4x4(Macroblock *currMB, ColorPlane curr_plane, imgpel **currImg
     {
       i =  (decode_block_scan[k] & 3);
       j = ((decode_block_scan[k] >> 2) & 3);
+      // 16 是 2 的 4 次方
+      // 所以是 
+      // 以 4*4 的块为最小单位
+      // i 代表 横坐标
+      // j 代表纵坐标
 
       ioff = (i << 2);
       joff = (j << 2);
-      i4   = currMB->block_x + i;
-      j4   = currMB->block_y + j;
+      i4   = currMB->block_x + i;   // block_x 和 block_y 
+      j4   = currMB->block_y + j;   // 是以 4*4 为单位的
       j_pos = j4 * BLOCK_SIZE;
       i_pos = i4 * BLOCK_SIZE;
 
@@ -228,15 +242,20 @@ static void set_chroma_vector(Macroblock *currMB)
   currSlice->max_mb_vmv_r = (currSlice->structure != FRAME || ( currMB->mb_field )) ? p_Vid->max_vmv_r >> 1 : p_Vid->max_vmv_r;
 }
 
+// 到这里
+// 最重要的是 区分清楚 currImg 和 dec_picture 各自的作用意义和区别
 int mb_pred_skip(Macroblock *currMB, ColorPlane curr_plane, imgpel **currImg, StorablePicture *dec_picture)
 {
   Slice *currSlice = currMB->p_Slice;
   VideoParameters *p_Vid = currMB->p_Vid;
 
+  // 获得 mv
   set_chroma_vector(currMB);
 
+  // 执行运动补偿
   perform_mc(currMB, curr_plane, dec_picture, LIST_0, 0, 0, MB_BLOCK_SIZE, MB_BLOCK_SIZE);
 
+  // 重建区域拷贝
   copy_image_data_16x16(&currImg[currMB->pix_y], currSlice->mb_pred[curr_plane], currMB->pix_x, 0);
 
   if ((dec_picture->chroma_format_idc != YUV400) && (dec_picture->chroma_format_idc != YUV444)) 

@@ -1,0 +1,2 @@
+F:\JM-decode\JM_decode\JM-JM-19.0\JM-JM-19.0\bin\ldecod.pdb
+F:\JM-decode\JM_decode\JM-JM-19.0\JM-JM-19.0\ldecod\Debug_x64_vc11\ldecod.pdb

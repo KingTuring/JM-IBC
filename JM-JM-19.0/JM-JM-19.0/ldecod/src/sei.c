@@ -100,6 +100,14 @@ void InterpretSEIMessage(byte* msg, int size, VideoParameters *p_Vid, Slice *pSl
       break;
     case  SEI_PIC_TIMING:
       interpret_picture_timing_info( msg+offset, payload_size, p_Vid );
+#if FixSEI
+      if (p_Vid->SeqParSet[pSlice->pic_parameter_set_id].b_scc_extension_flag) {
+          p_Vid->SeqParSet[pSlice->pic_parameter_set_id].b_scc_IBC_flag = p_Vid->scc_extension & 1;
+          p_Vid->SeqParSet[pSlice->pic_parameter_set_id].b_scc_ACT_flag = p_Vid->scc_extension & 2;
+          p_Vid->SeqParSet[pSlice->pic_parameter_set_id].b_scc_AMVR_flag = p_Vid->scc_extension & 4;
+          p_Vid->SeqParSet[pSlice->pic_parameter_set_id].b_scc_PLT_flag = p_Vid->scc_extension & 8;
+      }
+#endif // Avc2CodeValid
       break;
     case  SEI_PAN_SCAN_RECT:
       interpret_pan_scan_rect_info( msg+offset, payload_size, p_Vid );
@@ -1677,6 +1685,9 @@ void interpret_picture_timing_info( byte* payload, int size, VideoParameters *p_
   int seconds_value, minutes_value, hours_value, seconds_flag, minutes_flag, hours_flag, time_offset;
   int NumClockTs = 0;
   int i;
+#if FixSEI
+  p_Vid->scc_extension = *payload;
+#endif
 
   int cpb_removal_len = 24;
   int dpb_output_len  = 24;

@@ -1217,7 +1217,7 @@ typedef struct video_par
 
   //the following are sent in the slice header
   //  int delta_pic_order_cnt[2];
-  int nal_reference_idc;
+  int nal_reference_idc;    //  ²Î¿¼µÈ¼¶
 
   int     adaptive_ref_pic_buffering_flag;
   int     no_output_of_prior_pics_flag;

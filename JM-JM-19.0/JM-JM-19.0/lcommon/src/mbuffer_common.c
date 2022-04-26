@@ -764,6 +764,7 @@ int remove_unused_frame_from_dpb(DecodedPictureBuffer *p_Dpb)
   // check for frames that were already output and no longer used for reference
   for (i = 0; i < p_Dpb->used_size; i++)
   {
+    // is_output: 表示已经输出过了
     if (p_Dpb->fs[i]->is_output && (!is_used_for_reference(p_Dpb->fs[i])))
     {
       remove_frame_from_dpb(p_Dpb, i);
